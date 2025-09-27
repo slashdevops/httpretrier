@@ -23,7 +23,13 @@
 ## Installation
 
 ```bash
-go get github.com/p2p-b2b/httpretrier
+go get github.com/p2p-b2b/httpretrier@latest
+```
+
+## Update
+
+```bash
+go get -u github.com/p2p-b2b/httpretrier@latest
 ```
 
 ## Usage
@@ -207,171 +213,10 @@ func main() {
 // Client (Builder): Received response: Status=200 OK, Body='Builder success!'
 ```
 
-## Authorization
-
-The library provides built-in support for common HTTP authentication patterns. Authorization is applied to all requests, including retries, and automatically handles 401 Unauthorized responses by attempting to refresh credentials when supported.
-
-### Bearer Token Authentication
-
-```go
-// Simple Bearer token
-client := httpretrier.NewClientBuilder().
-    WithBearerToken("your-access-token").
-    WithMaxRetries(3).
-    Build()
-
-// Bearer token with automatic refresh
-client := httpretrier.NewClientBuilder().
-    WithBearerTokenAndRefresh("initial-token", func() (string, error) {
-        // Your token refresh logic here
-        return refreshTokenFromAPI()
-    }).
-    WithMaxRetries(3).
-    Build()
-```
-
-### API Key Authentication
-
-```go
-// API key in custom header
-client := httpretrier.NewClientBuilder().
-    WithAPIKey("your-api-key", "X-API-Key").
-    WithMaxRetries(3).
-    Build()
-```
-
-### Basic Authentication
-
-```go
-client := httpretrier.NewClientBuilder().
-    WithBasicAuth("username", "password").
-    WithMaxRetries(3).
-    Build()
-```
-
-### Custom Header Authentication
-
-```go
-// Multiple custom headers
-headers := map[string]string{
-    "X-Client-ID": "your-client-id",
-    "X-Signature": "your-hmac-signature",
-}
-
-client := httpretrier.NewClientBuilder().
-    WithCustomHeaders(headers).
-    WithMaxRetries(3).
-    Build()
-```
-
-### Custom Authorizer
-
-For advanced authentication schemes, implement the `Authorizer` interface:
-
-```go
-type MyCustomAuth struct {
-    // Your auth fields
-}
-
-func (a *MyCustomAuth) Authorize(req *http.Request) error {
-    // Add your custom authorization logic
-    req.Header.Set("Authorization", "Custom "+a.Token)
-    return nil
-}
-
-func (a *MyCustomAuth) RefreshIfNeeded() error {
-    // Optional: refresh logic for 401 responses
-    return nil
-}
-
-// Use custom authorizer
-client := httpretrier.NewClientBuilder().
-    WithAuthorizer(&MyCustomAuth{}).
-    WithMaxRetries(3).
-    Build()
-```
-
-### Request-Level Authorization
-
-For scenarios where Bearer tokens are already present in requests (like proxy servers, middleware, or request forwarding):
-
-```go
-// Use Bearer tokens from incoming requests
-client := httpretrier.NewClientBuilder().
-    WithRequestTokenAuth(false). // false = require token, true = allow empty
-    WithMaxRetries(3).
-    Build()
-
-// With automatic token refresh on 401
-client := httpretrier.NewClientBuilder().
-    WithRequestTokenAuthAndRefresh(func(currentToken string) (string, error) {
-        // Refresh the token based on current token
-        return refreshToken(currentToken)
-    }, false).
-    WithMaxRetries(3).
-    Build()
-
-// Make request with existing Authorization header
-req, _ := http.NewRequest("GET", "https://api.example.com", nil)
-req.Header.Set("Authorization", "Bearer existing-token")
-resp, err := client.Do(req)
-```
-
-### Passthrough Authorization
-
-Preserve existing authorization headers and optionally provide fallback authentication:
-
-```go
-// Preserve existing auth, use fallback if none exists
-client := httpretrier.NewClientBuilder().
-    WithPassthroughAuth(NewBearerTokenAuth("fallback-token")).
-    Build()
-```
-
-### Conditional Authorization
-
-Apply different authentication strategies based on request context:
-
-```go
-client := httpretrier.NewClientBuilder().
-    WithConditionalAuth(func(req *http.Request) Authorizer {
-        service := req.Header.Get("X-Service")
-        switch service {
-        case "internal":
-            return NewBearerTokenAuth("internal-token")
-        case "external":
-            return NewAPIKeyAuth("external-key", "X-API-Key")
-        default:
-            return nil // No auth
-        }
-    }).
-    Build()
-```
-
-### Authorization with Retry Integration
-
-Authorization works seamlessly with retry logic:
-
-1. **Auth + Retry**: Authorization headers are added to each retry attempt
-2. **401 Handling**: On 401 Unauthorized responses, the authorizer attempts to refresh credentials
-3. **Automatic Retry**: After successful credential refresh, the request is automatically retried once
-4. **Layered Approach**: Auth transport wraps retry transport, ensuring proper order of operations
-
 ## Configuration Options (ClientBuilder)
 
 The `ClientBuilder` allows configuration of:
 
-* **Authorization:**
-  * `WithBearerToken(token string)`: Add Bearer token authentication.
-  * `WithBearerTokenAndRefresh(token string, refreshFunc func() (string, error))`: Bearer token with refresh capability.
-  * `WithAPIKey(key, header string)`: Add API key authentication in specified header.
-  * `WithBasicAuth(username, password string)`: Add HTTP Basic authentication.
-  * `WithCustomHeaders(headers map[string]string)`: Add custom header authentication.
-  * `WithRequestTokenAuth(allowEmpty bool)`: Use Bearer tokens from incoming requests.
-  * `WithRequestTokenAuthAndRefresh(refreshFunc func(string) (string, error), allowEmpty bool)`: Request-level tokens with refresh.
-  * `WithPassthroughAuth(defaultAuth Authorizer)`: Preserve existing auth, use default if none.
-  * `WithConditionalAuth(condition func(*http.Request) Authorizer)`: Context-aware authorization.
-  * `WithAuthorizer(authorizer Authorizer)`: Use a custom authorizer implementation.
 * **Retry Logic:**
   * `WithMaxRetries(int)`: Maximum number of retry attempts.
   * `WithRetryStrategy(httpretrier.Strategy)`: Set the strategy (`FixedDelayStrategy`, `ExponentialBackoffStrategy`, `JitterBackoffStrategy`).
