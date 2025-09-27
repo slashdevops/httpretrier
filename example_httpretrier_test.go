@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -156,4 +157,69 @@ func ExampleNewClientBuilder_transparent() {
 	// Client: Making request with custom headers...
 	// Server: Received custom header: my-custom-value
 	// Client: Response: Custom headers preserved!
+}
+
+// ExampleNewClient_withCustomTransport demonstrates using a custom base transport
+// with specific transport settings while maintaining transparent retry behavior.
+func ExampleNewClient_withCustomTransport() {
+	var requestCount int32
+
+	// Create a test server that fails initially to show retry behavior with custom transport
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&requestCount, 1)
+		fmt.Printf("Server: Request %d from custom transport\n", count)
+
+		if count <= 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Custom transport with retries works!"))
+		}
+	}))
+	defer server.Close()
+
+	// Create a custom transport with specific settings
+	customTransport := &http.Transport{
+		MaxIdleConns:        50,               // Custom connection pool size
+		IdleConnTimeout:     30 * time.Second, // Custom idle timeout
+		DisableKeepAlives:   false,            // Enable keep-alives
+		MaxIdleConnsPerHost: 10,               // Custom per-host connection limit
+		TLSHandshakeTimeout: 5 * time.Second,  // Custom TLS timeout
+	}
+
+	// Create retry client with custom transport
+	client := httpretrier.NewClient(
+		3, // Max retries
+		httpretrier.ExponentialBackoff(5*time.Millisecond, 50*time.Millisecond),
+		customTransport, // Use our custom transport as the base
+	)
+
+	fmt.Println("Client: Making request with custom transport...")
+	resp, err := client.Get(server.URL)
+	if err != nil {
+		fmt.Printf("Client: Request failed: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Printf("Client: Response: %s\n", string(body))
+	fmt.Printf("Client: Custom transport config preserved (MaxIdleConns: %d)\n",
+		customTransport.MaxIdleConns)
+
+	// Output:
+	// Client: Making request with custom transport...
+	// Server: Request 1 from custom transport
+	// Server: Request 2 from custom transport
+	// Client: Response: Custom transport with retries works!
+	// Client: Custom transport config preserved (MaxIdleConns: 50)
+}
+
+// Helper function to parse URL (avoiding error handling in example)
+func mustParseURL(rawURL string) *url.URL {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		panic(err)
+	}
+	return u
 }

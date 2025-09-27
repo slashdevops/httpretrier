@@ -106,6 +106,52 @@ func main() {
 // Client: Received response: Status=200 OK, Body='Success!'
 ```
 
+### Using Custom Transport
+
+You can provide your own `http.Transport` with specific settings for connection pooling, timeouts, TLS configuration, etc.:
+
+```go
+package main
+
+import (
+  "fmt"
+  "net/http"
+  "time"
+
+  "github.com/p2p-b2b/httpretrier"
+)
+
+func main() {
+  // Create a custom transport with specific settings
+  customTransport := &http.Transport{
+    MaxIdleConns:        50,                // Custom connection pool size
+    IdleConnTimeout:     30 * time.Second, // Custom idle timeout
+    DisableKeepAlives:   false,            // Enable keep-alives
+    MaxIdleConnsPerHost: 10,               // Custom per-host connection limit
+    TLSHandshakeTimeout: 5 * time.Second,  // Custom TLS timeout
+  }
+
+  // Create retry client with your custom transport
+  client := httpretrier.NewClient(
+    3, // Max retries
+    httpretrier.ExponentialBackoff(100*time.Millisecond, 1*time.Second),
+    customTransport, // Use your custom transport as the base
+  )
+
+  // Use the client normally - all your transport settings are preserved
+  resp, err := client.Get("https://api.example.com/data")
+  if err != nil {
+    fmt.Printf("Request failed: %v\n", err)
+    return
+  }
+  defer resp.Body.Close()
+
+  // Your custom transport settings (connection pooling, timeouts) are used
+  // while still getting automatic retry functionality
+  fmt.Printf("Success with custom transport! Status: %d\n", resp.StatusCode)
+}
+```
+
 ### Advanced Configuration with ClientBuilder
 
 For more control over the client and transport settings, use the `ClientBuilder`.
