@@ -121,7 +121,7 @@ func (r *retryTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// Check if we should retry
 		if attempt < r.MaxRetries {
 			delay := retryStrategy(attempt)
-			fmt.Printf("Attempt %d failed. Retrying after %v...\n", attempt+1, delay) // Consider using a logger
+			// Silent retry - no debug output for clean, transparent operation
 			time.Sleep(delay)
 		} else {
 			// Max retries reached, return the last error or a generic failure error

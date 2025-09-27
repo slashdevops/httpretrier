@@ -1,4 +1,3 @@
-
 name: Release
 
 # https://help.github.com/es/actions/reference/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
@@ -19,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go 1.x
         id: go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: ./go.mod
 

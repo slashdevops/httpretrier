@@ -91,7 +91,7 @@ func (s Strategy) IsValid() bool {
 }
 
 // Client is a custom HTTP client with configurable settings
-// and retry strategies
+// and retry strategies. Works transparently with existing request headers.
 type Client struct {
 	maxIdleConns          int
 	idleConnTimeout       time.Duration
@@ -143,52 +143,27 @@ func (b *ClientBuilder) WithMaxIdleConns(maxIdleConns int) *ClientBuilder {
 
 // WithIdleConnTimeout sets the idle connection timeout
 // and returns the ClientBuilder for method chaining
-// Valid range: 1 second to 120 seconds
-// If the value is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the time the client waits
-// before closing idle connections
-// The idle connection timeout is the time the client waits
-// before closing an idle connection
-// The value must be between ValidMinIdleConnTimeout and ValidMaxIdleConnTimeout
-// If the value is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the time the client waits
 func (b *ClientBuilder) WithIdleConnTimeout(idleConnTimeout time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.idleConnTimeout = idleConnTimeout
 	return b
 }
 
 // WithTLSHandshakeTimeout sets the TLS handshake timeout
 // and returns the ClientBuilder for method chaining
-// It is important to note that the TLS handshake timeout
-// is not the same as the overall timeout for the HTTP request
-// The TLS handshake timeout is the time allowed for the TLS handshake
-// to complete before the connection is closed
-// The value must be between ValidMinTLSHandshakeTimeout and ValidMaxTLSHandshakeTimeout
-// If the value is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the time the client waits
 func (b *ClientBuilder) WithTLSHandshakeTimeout(tlsHandshakeTimeout time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.tlsHandshakeTimeout = tlsHandshakeTimeout
 	return b
 }
 
 // WithExpectContinueTimeout sets the expect continue timeout
 // and returns the ClientBuilder for method chaining
-// This timeout is used for HTTP/1.1 requests with Expect: 100-continue
-// The value must be between ValidMinExpectContinueTimeout and ValidMaxExpectContinueTimeout
-// If the value is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the time the client waits
 func (b *ClientBuilder) WithExpectContinueTimeout(expectContinueTimeout time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.expectContinueTimeout = expectContinueTimeout
 	return b
 }
 
-// WithDisableKeepAlives sets the disable keep-alives setting
+// WithDisableKeepAlives sets whether to disable keep-alives
 // and returns the ClientBuilder for method chaining
-// This setting controls whether the client should keep connections alive
-// after a request is completed
 func (b *ClientBuilder) WithDisableKeepAlives(disableKeepAlives bool) *ClientBuilder {
 	b.client.disableKeepAlives = disableKeepAlives
 	return b
@@ -196,88 +171,62 @@ func (b *ClientBuilder) WithDisableKeepAlives(disableKeepAlives bool) *ClientBui
 
 // WithMaxIdleConnsPerHost sets the maximum number of idle connections per host
 // and returns the ClientBuilder for method chaining
-// This is a performance optimization for HTTP/1.1
-// The value must be between ValidMinIdleConnsPerHost and ValidMaxIdleConnsPerHost
-// If the value is invalid, a warning is logged and the default value is used
 func (b *ClientBuilder) WithMaxIdleConnsPerHost(maxIdleConnsPerHost int) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.maxIdleConnsPerHost = maxIdleConnsPerHost
 	return b
 }
 
 // WithTimeout sets the timeout for HTTP requests
 // and returns the ClientBuilder for method chaining
-// The timeout must be between ValidMinTimeout and ValidMaxTimeout
-// If the timeout is invalid, a warning is logged and the default value is used
 func (b *ClientBuilder) WithTimeout(timeout time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.timeout = timeout
 	return b
 }
 
 // WithMaxRetries sets the maximum number of retry attempts
 // and returns the ClientBuilder for method chaining
-// The maximum number of retries must be between ValidMinRetries and ValidMaxRetries
-// If the maximum number of retries is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the number of retry attempts
-// The maximum number of retries is the maximum number of times
-// the client will retry a failed request
 func (b *ClientBuilder) WithMaxRetries(maxRetries int) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.maxRetries = maxRetries
 	return b
 }
 
-// WithRetryBaseDelay sets the base delay for retry strategies like ExponentialBackoff and JitterBackoff.
-// For FixedDelay, this sets the fixed delay duration.
+// WithRetryBaseDelay sets the base delay for retry strategies
+// and returns the ClientBuilder for method chaining
 func (b *ClientBuilder) WithRetryBaseDelay(baseDelay time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.retryBaseDelay = baseDelay
 	return b
 }
 
-// WithRetryMaxDelay sets the maximum delay for retry strategies like ExponentialBackoff and JitterBackoff.
-// This value is ignored by FixedDelay.
+// WithRetryMaxDelay sets the maximum delay for retry strategies
+// and returns the ClientBuilder for method chaining
 func (b *ClientBuilder) WithRetryMaxDelay(maxDelay time.Duration) *ClientBuilder {
-	// Just set the value, Build will validate/default
 	b.client.retryMaxDelay = maxDelay
 	return b
 }
 
-// WithRetryStrategy sets the retry strategy for the client
+// WithRetryStrategy sets the retry strategy type
 // and returns the ClientBuilder for method chaining
-// The retry strategy determines how the client will handle
-// retrying failed requests
-// The retry strategy can be one of the following:
-// "fixed", "jitter", or "exponential"
-// If the retry strategy is invalid, a warning is logged and the default value is used
-// This setting is useful for controlling the retry behavior
-// The retry strategy is the strategy used to determine the delay
-// between retry attempts
-func (b *ClientBuilder) WithRetryStrategy(retryStrategy Strategy) *ClientBuilder {
-	// Validate the strategy type itself
-	// Just set the type, Build will validate/default
-	b.client.retryStrategyType = retryStrategy
+func (b *ClientBuilder) WithRetryStrategy(strategy Strategy) *ClientBuilder {
+	// Set the value as-is, validation happens during Build()
+	b.client.retryStrategyType = strategy
 	return b
 }
 
-// WithRetryStrategyAsString sets the retry strategy for the client
-// using a string representation of the strategy type
+// WithRetryStrategyAsString sets the retry strategy type from a string
 // and returns the ClientBuilder for method chaining
-func (b *ClientBuilder) WithRetryStrategyAsString(retryStrategy string) *ClientBuilder {
-	strategy := Strategy(retryStrategy)
-	if !strategy.IsValid() {
-		slog.Warn("Invalid retry strategy type, using default (Exponential)", "invalidValue", retryStrategy, "defaultValue", ExponentialBackoffStrategy)
-		strategy = ExponentialBackoffStrategy
+func (b *ClientBuilder) WithRetryStrategyAsString(strategy string) *ClientBuilder {
+	s := Strategy(strategy)
+	if !s.IsValid() {
+		slog.Warn("Invalid retry strategy type, using default (Exponential)", "invalidValue", s, "defaultValue", ExponentialBackoffStrategy)
+		s = ExponentialBackoffStrategy
 	}
-
-	b.client.retryStrategyType = strategy
-
+	b.client.retryStrategyType = s
 	return b
 }
 
 // Build creates and returns a new HTTP client with the specified settings
-// and retry strategy
+// and retry strategy. The client works transparently, preserving any existing
+// headers in requests without requiring explicit configuration.
 func (b *ClientBuilder) Build() *http.Client {
 	// validate the settings and set defaults if necessary
 
@@ -316,14 +265,13 @@ func (b *ClientBuilder) Build() *http.Client {
 		b.client.maxRetries = DefaultMaxRetries
 	}
 
-	// Validate delays *before* creating the strategy function
 	if b.client.retryBaseDelay < ValidMinBaseDelay || b.client.retryBaseDelay > ValidMaxBaseDelay {
-		slog.Warn("Invalid base delay, using default value", "invalidValue", b.client.retryBaseDelay, "defaultValue", DefaultBaseDelay)
+		slog.Warn("Invalid retry base delay, using default value", "invalidValue", b.client.retryBaseDelay, "defaultValue", DefaultBaseDelay)
 		b.client.retryBaseDelay = DefaultBaseDelay
 	}
 
 	if b.client.retryMaxDelay < ValidMinMaxDelay || b.client.retryMaxDelay > ValidMaxMaxDelay {
-		slog.Warn("Invalid max delay, using default value", "invalidValue", b.client.retryMaxDelay, "defaultValue", DefaultMaxDelay)
+		slog.Warn("Invalid retry max delay, using default value", "invalidValue", b.client.retryMaxDelay, "defaultValue", DefaultMaxDelay)
 		b.client.retryMaxDelay = DefaultMaxDelay
 	}
 
@@ -362,13 +310,17 @@ func (b *ClientBuilder) Build() *http.Client {
 		MaxIdleConnsPerHost:   b.client.maxIdleConnsPerHost,
 	}
 
+	// Create retry transport - this is the only layer needed for transparent operation
+	// It automatically preserves all existing headers without any explicit auth configuration
+	finalTransport := &retryTransport{
+		Transport:     transport,
+		MaxRetries:    b.client.maxRetries,
+		RetryStrategy: finalRetryStrategy,
+	}
+
 	// Create the HTTP client with the specified settings
 	return &http.Client{
-		Timeout: b.client.timeout,
-		Transport: &retryTransport{
-			Transport:     transport,
-			MaxRetries:    b.client.maxRetries,
-			RetryStrategy: finalRetryStrategy, // Use the function created in Build
-		},
+		Timeout:   b.client.timeout,
+		Transport: finalTransport,
 	}
 }
