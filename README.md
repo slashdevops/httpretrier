@@ -1,7 +1,7 @@
 # httpretrier
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/p2p-b2b/httpretrier.svg)](https://pkg.go.dev/github.com/p2p-b2b/httpretrier)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/p2p-b2b/httpretrier?style=plastic)
+[![Go Reference](https://pkg.go.dev/badge/github.com/slashdevops/httpretrier.svg)](https://pkg.go.dev/github.com/slashdevops/httpretrier)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/slashdevops/httpretrier?style=plastic)
 
 `httpretrier` is a Go library that provides a **transparent** drop-in replacement for `http.Client` with automatic retry logic. It preserves all existing request headers (including authentication) while handling transient server errors (5xx) or network issues by retrying requests based on configurable strategies.
 
@@ -23,13 +23,13 @@
 ## Installation
 
 ```bash
-go get github.com/p2p-b2b/httpretrier@latest
+go get github.com/slashdevops/httpretrier@latest
 ```
 
 ## Update
 
 ```bash
-go get -u github.com/p2p-b2b/httpretrier@latest
+go get -u github.com/slashdevops/httpretrier@latest
 ```
 
 ## Usage
@@ -66,7 +66,7 @@ import (
   "sync/atomic"
   "time"
 
-  "github.com/p2p-b2b/httpretrier"
+  "github.com/slashdevops/httpretrier"
 )
 
 func main() {
@@ -124,7 +124,7 @@ import (
   "net/http"
   "time"
 
-  "github.com/p2p-b2b/httpretrier"
+  "github.com/slashdevops/httpretrier"
 )
 
 func main() {
@@ -172,7 +172,7 @@ import (
   "net/http/httptest"
   "time"
 
-  "github.com/p2p-b2b/httpretrier"
+  "github.com/slashdevops/httpretrier"
 )
 
 func main() {

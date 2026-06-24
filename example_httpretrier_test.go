@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/p2p-b2b/httpretrier"
+	"github.com/slashdevops/httpretrier"
 )
 
 // Example demonstrates using exponential backoff.
