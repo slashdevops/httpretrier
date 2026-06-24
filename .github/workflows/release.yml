@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "## Lines of code" >> $GITHUB_STEP_SUMMARY
 
-          go install github.com/boyter/scc/v3@latest
+          go install github.com/boyter/scc/v3@v3.6.0
           scc --format html-table . | tee -a $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 

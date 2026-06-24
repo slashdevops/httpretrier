@@ -5,11 +5,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"sync/atomic"
 	"time"
 
-	"github.com/p2p-b2b/httpretrier"
+	"github.com/slashdevops/httpretrier"
 )
 
 // Example demonstrates using exponential backoff.
@@ -42,7 +41,7 @@ func Example() {
 		fmt.Printf("Client: Request failed: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	fmt.Printf("Client: Received response: Status=%s, Body='%s'\n", resp.Status, string(body))
@@ -82,7 +81,7 @@ func ExampleNewClient_withExistingAuth() {
 		} else {
 			fmt.Println("200 OK")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Authenticated and retried successfully"))
+			_, _ = w.Write([]byte("Authenticated and retried successfully"))
 		}
 	}))
 	defer server.Close()
@@ -100,7 +99,7 @@ func ExampleNewClient_withExistingAuth() {
 		fmt.Printf("Client: Request failed: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	fmt.Printf("Client: Success! Status=%s, Body='%s'\n", resp.Status, string(body))
@@ -126,7 +125,7 @@ func ExampleNewClientBuilder_transparent() {
 			fmt.Printf("Server: Received custom header: %s\n", customValue)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Custom headers preserved!"))
+		_, _ = w.Write([]byte("Custom headers preserved!"))
 	}))
 	defer server.Close()
 
@@ -148,7 +147,7 @@ func ExampleNewClientBuilder_transparent() {
 		fmt.Printf("Client: Request failed: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	fmt.Printf("Client: Response: %s\n", string(body))
@@ -173,7 +172,7 @@ func ExampleNewClient_withCustomTransport() {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Custom transport with retries works!"))
+			_, _ = w.Write([]byte("Custom transport with retries works!"))
 		}
 	}))
 	defer server.Close()
@@ -200,7 +199,7 @@ func ExampleNewClient_withCustomTransport() {
 		fmt.Printf("Client: Request failed: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	fmt.Printf("Client: Response: %s\n", string(body))
@@ -216,10 +215,3 @@ func ExampleNewClient_withCustomTransport() {
 }
 
 // Helper function to parse URL (avoiding error handling in example)
-func mustParseURL(rawURL string) *url.URL {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		panic(err)
-	}
-	return u
-}
